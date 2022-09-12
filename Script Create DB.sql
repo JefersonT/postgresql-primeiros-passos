@@ -71,7 +71,7 @@ insert into instrutor (nome, salario) values ('Mathes Fontelene', 400);
 insert into instrutor (nome, salario) values ('Lucas Santos', 300);
 insert into instrutor (nome, salario) values ('Pricilla Andrea', 500);
 insert into instrutor (nome, salario) values ('Jose Tomas', 1500);
-insert into instrutor (nome, salario) values ('Americano', 1000);
+insert into instrutor (nome, salario) values ('Maria José', 10000);
 
 
 create table log_instrutores (

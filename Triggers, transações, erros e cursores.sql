@@ -353,9 +353,178 @@ $$ language plpgsql;
 --		Aprendemos a usar o ASSERT que verifica condições e levanta exceções
 --		Entedemos que o RAISE pode ser usado no processo de depuração
 
+-- 04. Cursores
+-- Se precisamos retornar um resultado muito grande, cursores podem ajudar a poupar a quantidade de memória alocada pois o PostgreSQL
+-- não alocará na memória o resultado todo, mas sim apenas o suficiente para executar a query futuramente e pegar uma linha por vez.
+-- Um detalhe importante é que o FOR faz isso automaticamente, ou seja, apenas um salário por vez está sendo alocado em nossa query hoje.
+
+create function instrutores_internos(id_instrutor integer) returns refcursor as $$
+	declare
+--	salari decimal;
+	-- forma 01
+	cursor_salario refcursor;
+	-- forma 02
+--	cursor_salario refcursor for select instrutor.salario
+--									from instrutor 
+--									where id <> id_instrutor 
+--										and salario > 0;
+	begin
+		-- forma 01
+		open cursor_salario for select instrutor.salario from instrutor where id <> id_instrutor and salario > 0;
+		-- forma 02
+--		open cursor_salario;
+		
+		-- percorrendo cursor
+		fetch cursor_salario into salario;
+--		fetch last from cursor_salario into salario; -- valor anterior
+--		fetch next from cursor_salario into salario; -- proximo valor
+--		fetch prior from cursor_salario into salario; --
+--		fetch first from cursor_salario into salario; -- primeiro valor
+		
+		-- Mover o cursor
+--		fetch last from cursor_salario;
+--		fetch next from cursor_salario;
+--		fetch prior from cursor_salario;
+--		fetch first from cursor_salario; 
+		
+		-- fechar o cursor
+--		close cursor_salario;
+		
+		-- retornando o cursor
+		return cursor_salario;
+	end
+	
+$$ language plpgsql;
 
 
 
+--Pelo cenário descrito, de criar uma PL que retornar vários instrutores, poderíamos simplesmente usar o RETURN QUERY e não precisaríamos conhecer cursores.
+--
+--O problema é que, segundo a própria documentação do PostgreSQL, atualmente TODO o resultado da query é alocado em memória quando utilizamos essa instrução.
+-- Então se temos milhões de instrutores, nós vamos gerar um desperdício absurdo de memória.
+--
+--A documentação ainda diz que provavelmente no futuro isso será diferente, mas vamos trabalhar com o que temos hoje, certo?
+--
+--Trecho extraído da documentação:
+--
+--		The current implementation of RETURN NEXT and RETURN QUERY stores the entire result set before returning from the function, as discussed above.
+--		That means that if a PL/pgSQL function produces a very large result set, performance might be poor: data will be written to disk to avoid memory exhaustion,
+--		but the function itself will not return until the entire result set has been generated. A future version of PL/pgSQL might allow users to define
+--		set-returning functions that do not have this limitation. Currently, the point at which data begins being written to disk is controlled by the 
+--		work_mem configuration variable. Administrators who have sufficient memory to store larger result sets in memory should consider increasing this parameter.
+--
+--Dessa URL: https://www.postgresql.org/docs/current/plpgsql-control-structures.html
+
+create function instrutores_internos(id_instrutor integer) returns refcursor as $$
+	declare
+		cursor_salario refcursor;
+	begin
+		open cursor_salario for select instrutor.salario from instrutor where id <> id_instrutor and salario > 0;
+
+		return cursor_salario;
+	end;
+$$ language plpgsql;
+
+create or replace function cria_instrutor_log() returns trigger as $$
+  declare
+    media_salarial decimal;
+    instrutores_recebem_menos integer default 0;
+    total_instrutores integer default 0;
+    salario decimal;
+    percentual decimal;
+    cursor_salario refcursor;
+  begin
+	select avg (instrutor.salario) into media_salarial from instrutor;
+  	
+    if NEW.salario > media_salarial then
+      insert into log_instrutores (informacao) values (NEW.nome || ' recebe acima da média');
+    end if;
+   
+   select instrutores_internos(new.id) into cursor_salario;
+    loop
+	    fetch cursor_salario into salario;
+	   	exit when not found;
+	   
+    	total_instrutores := total_instrutores + 1;
+        if NEW.salario > salario then
+          instrutores_recebem_menos := instrutores_recebem_menos + 1;
+        end if;
+    end loop;
+   
+    percentual := instrutores_recebem_menos::decimal / total_instrutores::decimal * 100;
+   	ASSERT percentual < 100::decimal, 'Erro recebe mais que todos os funcionário!';
+   
+    insert into log_instrutores (informacao, teste)-- não existe teste, só é notado ao executar o insert
+   			values (NEW.nome || ' recebe mais do que ' || percentual || '% da grade de instrutores');
+   		RETURN NEW;
+   	
+  end;
+$$ language plpgsql;
+
+
+
+
+--Nesta aula:
+--
+--    * Entendemos o propósito de usar cursores, para poupar uso de memória
+--    * Vimos como abrir cursores, sendo eles bound ou unbound
+--    * Vimos como manipular cursores com FETCH e MOVE
+--    * Usamos cursores na prática em um LOOP
+
+
+-- 5. Processo de desenvolvimento
+
+do $$
+	declare
+		cursor_salario refcursor;
+		salario decimal;
+		total_instrutores integer default 0;
+		instrutores_recebem_menos integer default 0;
+		percentual decimal(5, 2);
+	begin
+		select instrutores_internos(3) into cursor_salario;
+    loop
+	    fetch cursor_salario into salario;
+	   	exit when not found;
+	   
+    	total_instrutores := total_instrutores + 1;
+        if 400::decimal > salario then
+          instrutores_recebem_menos := instrutores_recebem_menos + 1;
+        end if;
+    end loop;
+   	percentual := instrutores_recebem_menos::decimal / total_instrutores::decimal * 100;
+   
+   	raise notice 'Percentual: % %%', percentual;
+	end;
+	
+$$;
+
+
+
+--Vimos nesse vídeo que o DO declara um bloco de código sem retorno. 
+--Para recuperar o resultado que precisávamos, utilizamos a funcionalidade de mensagens com o RAISE.
+--
+--Se for necessário executar um script pontual que gere um relatório mais completo, 
+--podemos dentro desse bloco criar uma tabela temporária, preenchê-la com os dados do relatório, 
+--e após executar o script, fazer um simples SELECT na tabela temporária. :-)
+
+--
+--
+--Uma das boas práticas sugeridas no vídeo foi utilizar Early Return.
+--
+--Aqui você pode conferir uma explicação bem sucinta dessa técnica: https://www.alura.com.br/artigos/quanto-mais-simples-melhor
+--
+--O ideal é estudar bastante sobre programação e com isso aprenderemos no caminho diversas técnicas para deixar nosso código o mais legível possível.
+
+
+--Nesta aula:
+--
+--    * Aprendemos a usar blocos anônimos com DO
+--    * Vimos que blocos anônimos possuem 2 principais propósitos
+--        * Rodar um script pontual em PLpgSQL
+--        * Preparar uma função para efetivamente criá-la no futuro
+--    * Entendemos que boas práticas de programação são muito importantes
+--    * Conhecemos algumas outras ferramentas além do PgAdmin como DataGrip e EMS
 
 
 
