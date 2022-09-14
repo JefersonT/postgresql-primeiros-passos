@@ -1,8 +1,5 @@
 -- PostgreSQL: Triggers, transações, erros e cursores
 -- 01. Triggers (Gatilho)
--- Trigger é utilizado quando precisamos que uma determinada query seja executada automaticamente quando ocorrer um determinado evento.
-
-
 -- Função Trigger a ser executado com o trigger com o evento
 create or replace function cria_instrutor_log() returns trigger as $$
   declare
@@ -142,16 +139,7 @@ CREATE TRIGGER cria_log_instrutores_d_1_02 Before INSERT ON instrutor
 	FOR EACH ROW EXECUTE FUNCTION cria_instrutor_log();
 
 
--- Nesta aula:
---	* Entendemos o conceito de eventos no banco de dados
---	* Aprendemos como criar um Trigger Procedure
---	* Definimos um Trigger que executa uma Trigger Procedure quando um evento ocorre
---	* Entendemos a fundo detalhes de triggers como FOR EACH ROW|STATEMENT, etc
-
 -- 02. Gerenciamento de transações
--- Uma PL já está por padrão dentro de uma transação. Se for chamada em um código SQL, ela fará parte da mesma transação que aquele código. 
--- Se for chamada automaticamente por um trigger, ela fará parte da transação da instrução que gerou esse trigger.
-
 -- Causando erro
 create or replace function cria_instrutor_log() returns trigger as $$
   declare
@@ -186,14 +174,8 @@ CREATE TRIGGER cria_log_instrutores Before INSERT ON instrutor
 	FOR EACH ROW EXECUTE FUNCTION cria_instrutor_log();
 
 insert into instrutor (nome, salario) values ('Sasuke', 1000);
---	Nesta aula:
---	
---	* Vimos que há 2 sintaxes para iniciar uma transação: BEGIN e START TRANSACTION
---	* Entendemos que funções por si só já fazem parte de uma transação
---	* Aprendemos que erros cancelam as alterações de uma função
 
 -- 03. Erros e exceções
--- 
 -- Tratando erro com EXCEPTION
 create or replace function cria_instrutor_log() returns trigger as $$
   declare
@@ -346,13 +328,6 @@ $$ language plpgsql;
 --	Para cada caractere % que adicionarmos no formato da mensagem, ou seja, na string que definimos com o RAISE, 
 --	precisamos informar um outro parâmetro que será o valor que vai ocupar o espaço desse %.
 
---	Nesta aula:
---
---		Aprendemos o que são os erros (ou exceções) do PostgreSQL
---		Aprendemos a gerar erros e mensagens com o RAISE
---		Aprendemos a usar o ASSERT que verifica condições e levanta exceções
---		Entedemos que o RAISE pode ser usado no processo de depuração
-
 -- 04. Cursores
 -- Se precisamos retornar um resultado muito grande, cursores podem ajudar a poupar a quantidade de memória alocada pois o PostgreSQL
 -- não alocará na memória o resultado todo, mas sim apenas o suficiente para executar a query futuramente e pegar uma linha por vez.
@@ -396,24 +371,6 @@ create function instrutores_internos(id_instrutor integer) returns refcursor as 
 	
 $$ language plpgsql;
 
-
-
---Pelo cenário descrito, de criar uma PL que retornar vários instrutores, poderíamos simplesmente usar o RETURN QUERY e não precisaríamos conhecer cursores.
---
---O problema é que, segundo a própria documentação do PostgreSQL, atualmente TODO o resultado da query é alocado em memória quando utilizamos essa instrução.
--- Então se temos milhões de instrutores, nós vamos gerar um desperdício absurdo de memória.
---
---A documentação ainda diz que provavelmente no futuro isso será diferente, mas vamos trabalhar com o que temos hoje, certo?
---
---Trecho extraído da documentação:
---
---		The current implementation of RETURN NEXT and RETURN QUERY stores the entire result set before returning from the function, as discussed above.
---		That means that if a PL/pgSQL function produces a very large result set, performance might be poor: data will be written to disk to avoid memory exhaustion,
---		but the function itself will not return until the entire result set has been generated. A future version of PL/pgSQL might allow users to define
---		set-returning functions that do not have this limitation. Currently, the point at which data begins being written to disk is controlled by the 
---		work_mem configuration variable. Administrators who have sufficient memory to store larger result sets in memory should consider increasing this parameter.
---
---Dessa URL: https://www.postgresql.org/docs/current/plpgsql-control-structures.html
 
 create function instrutores_internos(id_instrutor integer) returns refcursor as $$
 	declare
@@ -462,16 +419,6 @@ create or replace function cria_instrutor_log() returns trigger as $$
 $$ language plpgsql;
 
 
-
-
---Nesta aula:
---
---    * Entendemos o propósito de usar cursores, para poupar uso de memória
---    * Vimos como abrir cursores, sendo eles bound ou unbound
---    * Vimos como manipular cursores com FETCH e MOVE
---    * Usamos cursores na prática em um LOOP
-
-
 -- 5. Processo de desenvolvimento
 
 do $$
@@ -498,35 +445,3 @@ do $$
 	end;
 	
 $$;
-
-
-
---Vimos nesse vídeo que o DO declara um bloco de código sem retorno. 
---Para recuperar o resultado que precisávamos, utilizamos a funcionalidade de mensagens com o RAISE.
---
---Se for necessário executar um script pontual que gere um relatório mais completo, 
---podemos dentro desse bloco criar uma tabela temporária, preenchê-la com os dados do relatório, 
---e após executar o script, fazer um simples SELECT na tabela temporária. :-)
-
---
---
---Uma das boas práticas sugeridas no vídeo foi utilizar Early Return.
---
---Aqui você pode conferir uma explicação bem sucinta dessa técnica: https://www.alura.com.br/artigos/quanto-mais-simples-melhor
---
---O ideal é estudar bastante sobre programação e com isso aprenderemos no caminho diversas técnicas para deixar nosso código o mais legível possível.
-
-
---Nesta aula:
---
---    * Aprendemos a usar blocos anônimos com DO
---    * Vimos que blocos anônimos possuem 2 principais propósitos
---        * Rodar um script pontual em PLpgSQL
---        * Preparar uma função para efetivamente criá-la no futuro
---    * Entendemos que boas práticas de programação são muito importantes
---    * Conhecemos algumas outras ferramentas além do PgAdmin como DataGrip e EMS
-
-
-
-
---

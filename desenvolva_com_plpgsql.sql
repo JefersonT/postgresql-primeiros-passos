@@ -113,15 +113,6 @@ create or replace function primeira_pl() returns integer as $$
 $$ language plpgsql;
 
 select primeira_pl();
-  
---O que aprendemos nessa aula:
---
---    Entendemos as limitações do SQL quando se trata de programação;
---    Conhecemos a linguagem PLpgSQL, que é uma linguagem de Programação Procedural criada pelo PostgreSQL como uma extensão ao SQL;
---    Aprendemos sobre a estrutura básica de criação de uma função usando PLpgSQL;
---    Aprendemos a definir variáveis;
---    Entendemos o conceito de blocos e escopos usando PLpgSQL.
-
 
 -- retornando void
 create  table a (nome varchar(255) not null);
@@ -267,18 +258,8 @@ select nome, salario, salario_ok(instrutor) from instrutor;
 
 
 
---O que aprendemos nessa aula:
---
---    Vimos como retornar valores utilizando PLpgSQL;
---    Aprendemos a tomar decisões em nossos códigos usando IF;
---    Conseguimos controlar o fluxo de nossa aplicação com ELSEIF e ELSE;
---    Aprendemos a deixar nosso código um pouco mais legível com CASE.
 
 -- RETURN NEXT
--- Essa instrução é utilizada quando precisamos retornar múltiplas linhas de uma função PLpgSQL 
---   mas não temos uma query para isso (senão poderíamos utilizar o RETURN QUERY).
--- Se você quiser ler com mais detalhes sobre as formas de retornar em uma função, 
---   dá uma olhada aqui: https://www.postgresql.org/docs/current/plpgsql-control-structures.html#PLPGSQL-STATEMENTS-RETURNING
 create or replace function tabuada(numero integer) returns setof integer as $$
   begin 
     return next numero * 1;
@@ -369,9 +350,6 @@ $$ language plpgsql;
 
 select * from instrutor_com_salario();
 
-/* Para ler com mais detalhes sobre cada uma das estruturas aprendidas neste capítulo, 
- *  recomendo fortemente a leitura desse link: 
- *  https://www.postgresql.org/docs/current/plpgsql-control-structures.html#PLPGSQL-CONTROL-STRUCTURES-LOOPS */
 -- praticando
 create function cria_curso(nome_curso varchar, nome_categoria varchar) returns void as $$
   declare
@@ -426,12 +404,3 @@ $$ language plpgsql;
 select * from instrutor;
 select cria_instrutor('Luiz Sousa', 10000.00);
 select * from log_instrutores;
-
-
-
-
-/*Depois de um denso capítulo de exercícios, vou deixar aqui uma “curiosidade” para você se aprofundar nesse mundo de PLpgSQL.
- * Em raros momentos, podemos querer montar uma string contendo uma query a ser executada e armazenar essa string em uma variável.
- * Se nós tivermos uma string contendo uma query válida, podemos executar essa query através do comando EXECUTE da linguagem PLpgSQL.
- * Para ver exemplos e ler sobre mais detalhes, dá uma olhada aqui: https://www.postgresql.org/docs/current/plpgsql-statements.html#PLPGSQL-STATEMENTS-EXECUTING-DYN
- * Mais uma vez, caso essa instrução EXECUTE não fique clara, não hesite em abrir uma dúvida no fórum. ;-)*/
